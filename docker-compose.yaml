@@ -1,0 +1,68 @@
+version: '3.3'
+
+services:
+  jenkins:
+    build:
+      context: jenkins/
+      dockerfile: jenkins.Dockerfile
+    container_name: 'jenkins'
+    hostname: 'jenkins'
+    privileged: true
+    user: root
+    shm_size: '2gb'
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - sonarnet
+    ports:
+    - '8080:8080'
+    - '50000:50000'
+
+  sonar:
+    build:
+      context: sonar/
+      dockerfile: sonar.Dockerfile
+    container_name: 'sonar'
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+    networks:
+      - sonarnet
+    ports:
+      - '9000:9000'
+    environment:
+      - sonar.jdbc.username=sonar
+      - sonar.jdbc.password=sonar
+      - sonar.jdbc.url=jdbc:postgresql://db:5432/sonar
+
+  db:
+    build:
+      context: db/
+      dockerfile: postgres.Dockerfile
+    container_name: 'postgres_sonar'
+    networks:
+      - sonarnet
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
+
+networks:
+  sonarnet:
+    driver: bridge
+
+volumes:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_bundled-plugins:
+  postgresql:
+  postgresql_data:
+  jenkins_data:
